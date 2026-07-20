@@ -9,19 +9,6 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
-interface AuditLog {
-  id: string
-  action: string
-  description: string
-  user_username: string
-  ip_address: string
-  timestamp: string
-  entity_id?: string
-  entity_type?: string
-  old_value?: string
-  new_value?: string
-}
-
 export function AuditLogs() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState('all')

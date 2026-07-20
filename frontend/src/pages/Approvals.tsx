@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'sonner'
 import {
@@ -20,45 +20,10 @@ import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ExecutionTimeline } from '@/components/timeline/ExecutionTimeline'
 
-interface ApprovalRequest {
-  id: string
-  title: string
-  workflowId: string
-  workflow_name: string
-  submittedBy: string
-  status: 'pending' | 'approved' | 'rejected' | 'terminated' | 'rolled_back' | 'in_progress'
-  priority: 'low' | 'medium' | 'high' | 'critical'
-  createdAt: string
-  data: Record<string, any>
-  currentStageId: string
-  timeline: any[]
-}
-
 import { api } from '@/services/api'
 import { formatDistanceToNow } from 'date-fns'
 
-interface StageExecution {
-  id: string
-  stage_name: string
-  status: 'pending' | 'in_progress' | 'completed' | 'rejected' | 'skipped'
-  assigned_to_username?: string
-  acted_by_username?: string
-  comments?: string
-  acted_at?: string
-}
 
-interface ApprovalRequest {
-  id: string
-  title: string
-  workflow_name: string
-  submitted_by_username: string
-  status: 'pending' | 'in_progress' | 'approved' | 'rejected' | 'terminated' | 'rolled_back'
-  priority: 'low' | 'medium' | 'high' | 'critical'
-  created_at: string
-  data: Record<string, any>
-  current_stage_name: string
-  stage_executions: StageExecution[]
-}
 
 export function Approvals() {
   const queryClient = useQueryClient()
