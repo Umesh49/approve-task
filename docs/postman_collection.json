@@ -1,0 +1,1928 @@
+{
+  "info": {
+    "name": "Dynamic Approval Workflow Engine API",
+    "description": "Fully automated Postman collection — tokens are auto-fetched before every request if missing. No manual login needed!\n\n##  Seed Users (run `python manage.py seed_data` first)\n| Role      | Username | Password    | Email                  |\n|-----------|----------|-------------|------------------------|\n| Admin     | admin    | admin123    | admin@spinach.com      |\n| Approver  | manager  | manager123  | manager@spinach.com    |\n| Requester | employee | employee123 | employee@spinach.com   |",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "exec": [
+          "// Auto-login script — runs before EVERY request in the collection.",
+          "// If any token is missing, it logs in automatically using seed data credentials.",
+          "",
+          "var baseUrl = pm.collectionVariables.get('baseUrl') || 'http://127.0.0.1:8000';",
+          "",
+          "function loginIfMissing(tokenKey, refreshKey, email, password, label, callback) {",
+          "    var token = pm.collectionVariables.get(tokenKey);",
+          "    if (token && token.trim() !== '') {",
+          "        if (callback) callback();",
+          "        return;",
+          "    }",
+          "    console.log( label + ' token missing — auto-logging in...');",
+          "    pm.sendRequest({",
+          "        url: baseUrl + '/api/auth/login/',",
+          "        method: 'POST',",
+          "        header: { 'Content-Type': 'application/json' },",
+          "        body: {",
+          "            mode: 'raw',",
+          "            raw: JSON.stringify({ email: email, password: password })",
+          "        }",
+          "    }, function (err, res) {",
+          "        if (err || res.code !== 200) {",
+          "            console.error('Auto-login failed for ' + label + '. Is the server running?');",
+          "            return;",
+          "        }",
+          "        var json = res.json();",
+          "        pm.collectionVariables.set(tokenKey, json.access);",
+          "        pm.collectionVariables.set(refreshKey, json.refresh);",
+          "        console.log('Auto-logged in as ' + label);",
+          "        if (callback) callback();",
+          "    });",
+          "}",
+          "",
+          "// Auto-login all 3 users if their tokens are missing",
+          "loginIfMissing('admin_access_token',    'admin_refresh_token',    'admin@spinach.com',    'admin123',    'Admin');",
+          "loginIfMissing('manager_access_token',  'manager_refresh_token',  'manager@spinach.com',  'manager123',  'Manager');",
+          "loginIfMissing('employee_access_token', 'employee_refresh_token', 'employee@spinach.com', 'employee123', 'Employee');"
+        ],
+        "type": "text/javascript"
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000",
+      "type": "string"
+    },
+    {
+      "key": "admin_access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "admin_refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "manager_access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "manager_refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "employee_access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "employee_refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "workflow_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "stage_id_1",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "stage_id_2",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "rule_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "request_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Step 1 – Authentication (Run ALL 3 logins first!)",
+      "description": "Run all 3 login requests before anything else. Each one auto-saves its own token variable.",
+      "item": [
+        {
+          "name": "1a. Login as Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.access) {",
+                  "  pm.collectionVariables.set('admin_access_token', json.access);",
+                  "  pm.collectionVariables.set('admin_refresh_token', json.refresh);",
+                  "  console.log(' admin_access_token saved');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@spinach.com\",\n  \"password\": \"admin123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "1b. Login as Manager (Approver)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.access) {",
+                  "  pm.collectionVariables.set('manager_access_token', json.access);",
+                  "  pm.collectionVariables.set('manager_refresh_token', json.refresh);",
+                  "  console.log(' manager_access_token saved');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"manager@spinach.com\",\n  \"password\": \"manager123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "1c. Login as Employee (Requester)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.access) {",
+                  "  pm.collectionVariables.set('employee_access_token', json.access);",
+                  "  pm.collectionVariables.set('employee_refresh_token', json.refresh);",
+                  "  console.log(' employee_access_token saved');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"employee@spinach.com\",\n  \"password\": \"employee123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register New User",
+          "description": "Open to all. No token needed. Uses {{$randomUserName}} and {{$randomEmail}} to generate unique values on every Send.",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"{{$randomUserName}}\",\n  \"email\": \"{{$randomEmail}}\",\n  \"password\": \"testpass123\",\n  \"password_confirm\": \"testpass123\",\n  \"role\": \"requester\",\n  \"first_name\": \"{{$randomFirstName}}\",\n  \"last_name\": \"{{$randomLastName}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get My Profile (Admin)",
+          "description": "Returns the currently authenticated user's profile.",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "List All Users [Admin only]",
+          "description": "Always uses admin_access_token — works regardless of who else you are logged in as.",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/users/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "users",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Users filtered by Role [Admin only]",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/users/?role=approver",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "users",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "approver"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Refresh Admin Token",
+          "description": "Use if admin_access_token has expired (after 60 mins).\n\n⚠️ Because ROTATE_REFRESH_TOKENS=True, calling this will blacklist your old refresh token and issue a new one. Both admin_access_token AND admin_refresh_token are updated automatically.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.access) {",
+                  "  pm.collectionVariables.set('admin_access_token', json.access);",
+                  "  console.log('admin_access_token refreshed');",
+                  "}",
+                  "if (json.refresh) {",
+                  "  pm.collectionVariables.set('admin_refresh_token', json.refresh);",
+                  "  console.log('admin_refresh_token rotated and saved (old one is now blacklisted)');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{admin_refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "refresh",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Logout (Admin)",
+          "description": "Blacklists the admin refresh token. Tokens are cleared automatically.\n\n⚠️ IMPORTANT: You must run '1a. Login as Admin' first. If you get 'Token is invalid or expired' it means the token was already blacklisted — you are already logged out. Just run Login again.",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "var token = pm.collectionVariables.get('admin_refresh_token');",
+                  "if (!token || token.trim() === '') {",
+                  "  throw new Error('admin_refresh_token is empty. Run \"1a. Login as Admin\" first before logging out.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 205) {",
+                  "  pm.collectionVariables.set('admin_access_token', '');",
+                  "  pm.collectionVariables.set('admin_refresh_token', '');",
+                  "  console.log('Admin logged out. Tokens cleared. Run 1a again to log back in.');",
+                  "} else if (pm.response.code === 400) {",
+                  "  pm.collectionVariables.set('admin_access_token', '');",
+                  "  pm.collectionVariables.set('admin_refresh_token', '');",
+                  "  console.log('⚠️ Token already blacklisted — you were already logged out. Tokens cleared. Run 1a to log back in.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh\": \"{{admin_refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout",
+                ""
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 2 – Workflows [Admin]",
+      "description": "All workflow management actions require Admin role. Uses admin_access_token automatically.",
+      "item": [
+        {
+          "name": "List All Workflows",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workflows/?page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workflows",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create New Workflow",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.id) {",
+                  "  pm.collectionVariables.set('workflow_id', json.id);",
+                  "  console.log(' workflow_id saved:', json.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"IT Purchase Approval {{$timestamp}}\",\n  \"description\": \"Approval workflow for IT department purchase requests.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workflows/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workflows",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Workflow Detail",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workflows/{{workflow_id}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workflows",
+                "{{workflow_id}}",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Workflow (PATCH)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated: Handles high-value IT purchase approvals over 50,000.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workflows/{{workflow_id}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workflows",
+                "{{workflow_id}}",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Sync Workflow (Save Stages + Rules in bulk)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"IT Purchase Approval {{$timestamp}}\",\n  \"description\": \"Approval workflow for IT department purchase requests.\",\n  \"stages\": [\n    {\n      \"name\": \"Manager Review {{$timestamp}}\",\n      \"order\": 1,\n      \"approver_role\": \"approver\",\n      \"stage_type\": \"approval\"\n    },\n    {\n      \"name\": \"Finance Final Approval {{$timestamp}}\",\n      \"order\": 2,\n      \"approver_role\": \"admin\",\n      \"stage_type\": \"approval\"\n    }\n  ],\n  \"rules\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workflows/{{workflow_id}}/sync/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workflows",
+                "{{workflow_id}}",
+                "sync",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Publish Workflow",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"changelog\": \"Initial publish of IT Purchase Approval workflow.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workflows/{{workflow_id}}/publish/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workflows",
+                "{{workflow_id}}",
+                "publish",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unpublish Workflow (Revert to Draft)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workflows/{{workflow_id}}/unpublish/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workflows",
+                "{{workflow_id}}",
+                "unpublish",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Workflow Versions",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workflows/{{workflow_id}}/versions/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workflows",
+                "{{workflow_id}}",
+                "versions",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Workflow (Soft Delete)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/workflows/{{workflow_id}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workflows",
+                "{{workflow_id}}",
+                ""
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 3 – Stages [Admin]",
+      "description": "Add and manage stages within a workflow. Requires Admin role.",
+      "item": [
+        {
+          "name": "List Stages for Workflow",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workflows/{{workflow_id}}/stages/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workflows",
+                "{{workflow_id}}",
+                "stages",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Stage 1 – Manager Review",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.id) {",
+                  "  pm.collectionVariables.set('stage_id_1', json.id);",
+                  "  console.log(' stage_id_1 saved:', json.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Manager Review {{$timestamp}}\",\n  \"order\": 1,\n  \"approver_role\": \"approver\",\n  \"stage_type\": \"approval\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workflows/{{workflow_id}}/stages/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workflows",
+                "{{workflow_id}}",
+                "stages",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Stage 2 – Finance Final Approval",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.id) {",
+                  "  pm.collectionVariables.set('stage_id_2', json.id);",
+                  "  console.log(' stage_id_2 saved:', json.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Finance Final Approval {{$timestamp}}\",\n  \"order\": 2,\n  \"approver_role\": \"admin\",\n  \"stage_type\": \"approval\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workflows/{{workflow_id}}/stages/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workflows",
+                "{{workflow_id}}",
+                "stages",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reorder Stages (Drag and Drop)",
+          "description": "Paste stage_id_2 first and stage_id_1 second to swap their order.",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ordered_ids\": [\n    \"{{stage_id_2}}\",\n    \"{{stage_id_1}}\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workflows/{{workflow_id}}/stages/reorder/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workflows",
+                "{{workflow_id}}",
+                "stages",
+                "reorder",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Stage 1 (PATCH)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Senior Manager Review\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workflows/{{workflow_id}}/stages/{{stage_id_1}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workflows",
+                "{{workflow_id}}",
+                "stages",
+                "{{stage_id_1}}",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Stage",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/workflows/{{workflow_id}}/stages/{{stage_id_1}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workflows",
+                "{{workflow_id}}",
+                "stages",
+                "{{stage_id_1}}",
+                ""
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 4 – Rules [Admin]",
+      "description": "Configure dynamic rule conditions for a workflow. Requires Admin role.",
+      "item": [
+        {
+          "name": "Get Rule Tree",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workflows/{{workflow_id}}/rules/tree/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workflows",
+                "{{workflow_id}}",
+                "rules",
+                "tree",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Rules for Workflow",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workflows/{{workflow_id}}/rules/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workflows",
+                "{{workflow_id}}",
+                "rules",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Rule – Skip Finance Stage if amount < 1000",
+          "description": "Uses stage_id_2 (Finance stage) as the target to skip. The seed data also creates this same rule.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.id) {",
+                  "  pm.collectionVariables.set('rule_id', json.id);",
+                  "  console.log(' rule_id saved:', json.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stage\": \"{{stage_id_2}}\",\n  \"field_name\": \"amount\",\n  \"operator\": \"lt\",\n  \"value\": \"1000\",\n  \"action\": \"skip_stage\",\n  \"order\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workflows/{{workflow_id}}/rules/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workflows",
+                "{{workflow_id}}",
+                "rules",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Rule – AND Group (nested condition)",
+          "description": "Creates a group node with AND logic. Add child leaf rules to this group via parent_rule field.",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"logical_operator\": \"AND\",\n  \"action\": \"add_approval\",\n  \"stage\": \"{{stage_id_1}}\",\n  \"order\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workflows/{{workflow_id}}/rules/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workflows",
+                "{{workflow_id}}",
+                "rules",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Rule (PATCH)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"value\": \"5000\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workflows/{{workflow_id}}/rules/{{rule_id}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workflows",
+                "{{workflow_id}}",
+                "rules",
+                "{{rule_id}}",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Rule",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/rules/{{rule_id}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "rules",
+                "{{rule_id}}",
+                ""
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 5 – Submit Requests [Employee/Requester]",
+      "description": "Requests are submitted by the Employee (Requester role). Uses employee_access_token automatically.",
+      "item": [
+        {
+          "name": "List My Requests (as Employee)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{employee_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/?page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List All Requests (as Admin)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/?page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Submit Request – High Value (all stages triggered, amount=75000)",
+          "description": "amount=75000 is above 1000, so Finance stage is NOT skipped. Both stages will run.",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.id) {",
+                  "  pm.collectionVariables.set('request_id', json.id);",
+                  "  console.log(' request_id saved:', json.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{employee_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workflow\": \"{{workflow_id}}\",\n  \"title\": \"Server Equipment Purchase {{$timestamp}}\",\n  \"priority\": \"high\",\n  \"data\": {\n    \"amount\": 75000,\n    \"department\": \"IT\",\n    \"description\": \"Purchase of 10 new servers for data center expansion.\",\n    \"vendor\": \"Dell Technologies\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Submit Request – Low Value (Finance stage SKIPPED by rule, amount=500)",
+          "description": "amount=500 is below 1000. The rule engine will skip the Finance Final Approval stage automatically.",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{employee_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workflow\": \"{{workflow_id}}\",\n  \"title\": \"Office Stationery Purchase {{$timestamp}}\",\n  \"priority\": \"low\",\n  \"data\": {\n    \"amount\": 500,\n    \"department\": \"HR\",\n    \"description\": \"Monthly stationery restock.\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Request Detail",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{employee_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{request_id}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests",
+                "{{request_id}}",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Request Timeline (Stage History)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{request_id}}/timeline/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests",
+                "{{request_id}}",
+                "timeline",
+                ""
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 6 – Approve / Reject [Manager/Approver]",
+      "description": "Stage 1 (Manager Review) is approved by the Manager. Stage 2 (Finance) is approved by Admin. Each request uses the correct token automatically.",
+      "item": [
+        {
+          "name": "Approve Stage 1 (as Manager/Approver)",
+          "description": " Uses manager_access_token. The Manager approves the first pending stage.",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{manager_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comments\": \"Reviewed and approved by department manager.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{request_id}}/approve/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests",
+                "{{request_id}}",
+                "approve",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Approve Stage 2 (as Admin – Finance)",
+          "description": " Uses admin_access_token. Admin approves the Finance Final Approval stage.",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comments\": \"Budget verified and approved by Finance.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{request_id}}/approve/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests",
+                "{{request_id}}",
+                "approve",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reject Stage (as Manager/Approver)",
+          "description": "Comments are required for rejection. Uses manager_access_token.",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{manager_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"comments\": \"Budget limit exceeded for this quarter. Please resubmit next quarter.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{request_id}}/reject/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests",
+                "{{request_id}}",
+                "reject",
+                ""
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 7 – Rollback [Admin or Requester]",
+      "description": "Rollback can be performed by Admin or the original requester (employee). Separate requests for each type.",
+      "item": [
+        {
+          "name": "Rollback – Previous Step (as Admin)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"previous_step\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{request_id}}/rollback/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests",
+                "{{request_id}}",
+                "rollback",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Rollback – Back to Beginning (as Admin)",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"beginning\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{request_id}}/rollback/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests",
+                "{{request_id}}",
+                "rollback",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "Rollback – Terminate (as Employee/Requester)",
+          "description": "The original requester can also terminate their own request.",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{employee_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"terminate\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/requests/{{request_id}}/rollback/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "requests",
+                "{{request_id}}",
+                "rollback",
+                ""
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 8 – Audit Logs [Admin only]",
+      "description": "Full audit trail of all actions. Always uses admin_access_token.",
+      "item": [
+        {
+          "name": "List All Audit Logs",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/audit-logs/?page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "audit-logs",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter Audit Logs by Action",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/audit-logs/?action=request_approved",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "audit-logs",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "action",
+                  "value": "request_approved"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filter Audit Logs by Request",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/audit-logs/?entity_type=approval_request&entity_id={{request_id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "audit-logs",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "entity_type",
+                  "value": "approval_request"
+                },
+                {
+                  "key": "entity_id",
+                  "value": "{{request_id}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Step 9 – Health Check",
+      "description": "No authentication required.",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/health/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "health",
+                ""
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

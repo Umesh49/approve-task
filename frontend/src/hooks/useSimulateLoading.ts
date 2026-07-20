@@ -1,0 +1,1 @@
+import { useState, useEffect } from "react"; export function useSimulateLoading(ms = 800) { const [isLoading, setIsLoading] = useState(true); useEffect(() => { const timer = setTimeout(() => setIsLoading(false), ms); return () => clearTimeout(timer); }, [ms]); return isLoading; }
