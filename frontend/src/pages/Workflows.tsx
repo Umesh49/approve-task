@@ -57,7 +57,7 @@ export function Workflows() {
     if (workflows.length > 0 && !activeWorkflowId) {
       setActiveWorkflowId(workflows[0].id)
     }
-  }, [workflows])
+  }, [workflows, activeWorkflowId])
 
   // 3. Prefetch ALL workflow details in parallel the moment the list loads
   //    This fills React Query cache so clicking any workflow is instant (no spinner)
@@ -217,7 +217,7 @@ export function Workflows() {
           </h2>
           <div className="space-y-2">
             <AnimatePresence>
-              {workflows.map((wf) => (
+              {workflows.map((wf: any) => (
                 <motion.div
                   key={wf.id}
                   initial={{ opacity: 0, y: 5 }}

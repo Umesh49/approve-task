@@ -9,19 +9,6 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
-interface AuditLog {
-  id: string
-  action: string
-  description: string
-  user_username: string
-  ip_address: string
-  timestamp: string
-  entity_id?: string
-  entity_type?: string
-  old_value?: string
-  new_value?: string
-}
-
 export function AuditLogs() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState('all')
@@ -40,7 +27,7 @@ export function AuditLogs() {
     setCurrentPage(1)
   }, [searchTerm, filterType])
   
-  const filteredLogs = logs.filter(log => {
+  const filteredLogs = logs.filter((log: any) => {
     const matchesSearch = log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (log.user_username || '').toLowerCase().includes(searchTerm.toLowerCase())
@@ -110,7 +97,7 @@ export function AuditLogs() {
                 No audit logs found.
               </div>
             ) : (
-              paginatedLogs.map((log) => (
+              paginatedLogs.map((log: any) => (
                 <div key={log.id} className="p-4 flex items-start space-x-4 hover:bg-background/50 transition-colors">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2 mb-1">
