@@ -5,13 +5,15 @@ import * as z from 'zod'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
-import { CheckCircle2, Loader2, Lock, Mail, User as UserIcon } from 'lucide-react'
+import { CheckCircle2, Loader2, Mail, User as UserIcon } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { AnimatedBackground } from '@/components/ui/animated-background'
+import { PasswordInput } from '@/components/ui/password-input'
 
 const registerSchema = z.object({
   username: z
@@ -75,18 +77,19 @@ export function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-6 font-sans">
+    <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden">
+      <AnimatedBackground />
       <motion.div
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
-        className="w-full max-w-md"
+        className="w-full max-w-md relative"
       >
-        <Card className="border border-border bg-card rounded-md shadow-sm">
+        <Card className="border border-border bg-card/80 backdrop-blur-sm rounded-md shadow-sm">
           <CardHeader className="space-y-4 pt-8 pb-6 flex flex-col items-center text-center">
             <div className="flex h-12 w-12 items-center justify-center bg-[#F0FDF4] text-[#16A34A] rounded-md border border-[#16A34A]/20">
-<CheckCircle2 className="h-6 w-6" />
-</div>
+              <CheckCircle2 className="h-6 w-6" />
+            </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight m-0">Create Account</h1>
               <p className="text-xs text-muted-foreground mt-1">
@@ -169,16 +172,12 @@ export function Register() {
                 <Label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Password
                 </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-[#9CA3AF]" />
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="••••••••"
-                    className="pl-9 border-border bg-card focus-visible:ring-[#1C1917] rounded-md text-sm h-10"
-                    {...register('password')}
-                  />
-                </div>
+                <PasswordInput
+                  id="password"
+                  placeholder="••••••••"
+                  className="border-border bg-card focus-visible:ring-[#1C1917] rounded-md text-sm h-10"
+                  {...register('password')}
+                />
                 {errors.password && (
                   <p className="text-xs text-[#DC2626] font-medium mt-0.5">{errors.password.message}</p>
                 )}
@@ -188,16 +187,12 @@ export function Register() {
                 <Label htmlFor="password_confirm" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Confirm Password
                 </Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-[#9CA3AF]" />
-                  <Input
-                    id="password_confirm"
-                    type="password"
-                    placeholder="••••••••"
-                    className="pl-9 border-border bg-card focus-visible:ring-[#1C1917] rounded-md text-sm h-10"
-                    {...register('password_confirm')}
-                  />
-                </div>
+                <PasswordInput
+                  id="password_confirm"
+                  placeholder="••••••••"
+                  className="border-border bg-card focus-visible:ring-[#1C1917] rounded-md text-sm h-10"
+                  {...register('password_confirm')}
+                />
                 {errors.password_confirm && (
                   <p className="text-xs text-[#DC2626] font-medium mt-0.5">{errors.password_confirm.message}</p>
                 )}

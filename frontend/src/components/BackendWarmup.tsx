@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { RefreshCw, ServerCrash, CheckCircle2 } from 'lucide-react'
 import { api } from '@/services/api'
 import { useAppStore } from '@/stores/appStore'
+import { AnimatedBackground } from '@/components/ui/animated-background'
 
 export function BackendWarmup({ children }: { children: React.ReactNode }) {
   const { backendReady, setBackendReady } = useAppStore()
@@ -86,9 +87,10 @@ export function BackendWarmup({ children }: { children: React.ReactNode }) {
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background p-6 text-foreground"
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background p-6 text-foreground relative overflow-hidden"
         >
-          <div className="w-full max-w-md border border-border bg-card p-8 shadow-sm rounded-md">
+          <AnimatedBackground />
+          <div className="w-full max-w-md border border-border bg-card/80 backdrop-blur-sm p-8 shadow-sm rounded-md relative z-10">
             {errorState ? (
               <div className="flex flex-col items-center text-center space-y-6">
                 <div className="flex h-16 w-16 items-center justify-center bg-[#FEF2F2] text-[#DC2626] border border-border rounded-md">
