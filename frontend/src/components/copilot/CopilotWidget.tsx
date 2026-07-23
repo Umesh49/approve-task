@@ -16,17 +16,15 @@ export function CopilotWidget() {
   const setIsOpen = useChatStore(state => state.setIsOpen);
   const messagesByUser = useChatStore(state => state.messagesByUser) || {};
   const addMessageAction = useChatStore(state => state.addMessage);
-  const clearChatAction = useChatStore(state => state.clearChat);
 
   const rawMessages = messagesByUser[userId];
-  const messages = Array.isArray(rawMessages) ? rawMessages : [{
+  const messages: ChatMessage[] = Array.isArray(rawMessages) ? rawMessages : [{
     id: '1',
     role: 'assistant',
     content: "Hi! I'm your Workflow Copilot. Tell me what kind of approval process you want to build (e.g., 'Create a 3-stage expense workflow for marketing, assigning stage 1 to @manager')."
   }];
 
   const addMessage = (msg: ChatMessage) => addMessageAction(userId, msg);
-  const clearChat = () => clearChatAction(userId);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
