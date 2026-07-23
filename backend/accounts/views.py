@@ -87,4 +87,9 @@ class UserListView(generics.ListAPIView):
         role = self.request.query_params.get('role')
         if role:
             queryset = queryset.filter(role=role)
+            
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(username__icontains=search)
+            
         return queryset

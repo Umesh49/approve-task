@@ -136,7 +136,9 @@ class ApprovalRequestViewSet(viewsets.ModelViewSet):
         is_authorized = (
             user.role == 'admin' or
             current_stage.specific_approver == user or
-            current_stage.approver_role == user.role
+            current_stage.approver_role == user.role or
+            (current_stage.approver_role and current_stage.approver_role.lower() == user.username.lower()) or
+            (user.role == 'approver' and current_stage.approver_role not in ['admin', 'requester'])
         )
         if not is_authorized:
             raise PermissionDenied("You are not authorized to approve this stage.")

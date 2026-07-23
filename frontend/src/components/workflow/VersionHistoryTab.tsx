@@ -7,12 +7,15 @@ import { Loader2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { api } from '@/services/api';
 import type { Workflow } from '@/types';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 interface VersionHistoryTabProps {
   workflow: Workflow
 }
 
 export function VersionHistoryTab({ workflow }: VersionHistoryTabProps) {
+  const queryClient = useQueryClient();
   const [selectedV1, setSelectedV1] = useState('')
   const [selectedV2, setSelectedV2] = useState('')
   const [isComparing, setIsComparing] = useState(false)
@@ -20,6 +23,25 @@ export function VersionHistoryTab({ workflow }: VersionHistoryTabProps) {
   const [isLoading, setIsLoading] = useState(true)
   const [diffData, setDiffData] = useState<any>(null)
   const [isDiffLoading, setIsDiffLoading] = useState(false)
+  const [isRestoring, setIsRestoring] = useState(false)
+
+  const handleRestore = async (versionId: string, versionNum: number) => {
+    if (!confirm(`Are you sure you want to restore to v${versionNum}? This will instantly publish a new version replacing your active workflow.`)) return;
+    
+    setIsRestoring(true);
+    try {
+      await api.post(`/api/workflows/${workflow.id}/versions/${versionId}/restore/`);
+      toast.success(`Restored to Version ${versionNum}`);
+      // Invalidate to refresh the workflow data in other tabs
+      queryClient.invalidateQueries({ queryKey: ['workflows'] });
+      queryClient.invalidateQueries({ queryKey: ['workflow', workflow.id] });
+    } catch (err) {
+      toast.error('Failed to restore version.');
+      console.error(err);
+    } finally {
+      setIsRestoring(false);
+    }
+  }
 
   const diffVersions = [...versions, { id: 'v0', version_number: 0 }]
 
@@ -109,9 +131,20 @@ export function VersionHistoryTab({ workflow }: VersionHistoryTabProps) {
                   <p className="text-xs text-foreground font-medium leading-relaxed">
                     {hist.changelog || 'No changelog provided.'}
                   </p>
-                  <p className="text-[10px] text-[#9CA3AF]">
-                    By {hist.published_by_username || 'system'}
-                  </p>
+                  <div className="flex justify-between items-center mt-2">
+                    <p className="text-[10px] text-[#9CA3AF]">
+                      By {hist.published_by_username || 'system'}
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="text-[10px] h-6 px-2 shadow-none bg-background hover:bg-muted"
+                      onClick={() => handleRestore(hist.id, hist.version_number)}
+                      disabled={isRestoring}
+                    >
+                      {isRestoring ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : 'Restore Version'}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </div>

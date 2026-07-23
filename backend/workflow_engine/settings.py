@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "workflows",
     "approvals",
     "audit",
+    "copilot",
 ]
 
 MIDDLEWARE = [
@@ -180,3 +181,5 @@ LOGGING = {
         },
     },
 }
+
+GROQ_API_KEY = config('GROQ_API_KEY', default='')

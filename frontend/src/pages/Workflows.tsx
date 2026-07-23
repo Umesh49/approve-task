@@ -186,9 +186,16 @@ export function Workflows() {
       </div>
     )
   }
-  const hasInvalidRules = activeWorkflow?.rules?.some((rule: any) => 
-    rule.action === 'skip_stage' && !rule.target_stage_id
-  ) || false;
+  const checkRulesValid = (rules: any[]): boolean => {
+    if (!rules) return false;
+    return rules.some((rule: any) => {
+      if (rule.logical_operator && rule.children) {
+        return checkRulesValid(rule.children);
+      }
+      return rule.action === 'route_to' && !rule.target_stage_id;
+    });
+  };
+  const hasInvalidRules = checkRulesValid(activeWorkflow?.rules || []);
 
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto">

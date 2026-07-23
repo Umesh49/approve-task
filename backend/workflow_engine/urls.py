@@ -32,6 +32,7 @@ urlpatterns = [
     path("api/requests/", include("approvals.urls")),
     
     path("api/audit-logs/", include("audit.urls")),
+    path("api/copilot/", include("copilot.urls")),
     
 
     path("api/rules/<uuid:pk>/", RuleViewSet.as_view({

@@ -149,7 +149,16 @@ class WorkflowViewSet(viewsets.ModelViewSet):
         
         id_map = {}  # Map frontend temporary stage IDs to backend UUIDs
         
-        incoming_stage_ids = [str(s.get('id')) for s in stages_data if s.get('id') and not str(s.get('id')).startswith('wf-') and not str(s.get('id')).startswith('st-')]
+        import uuid
+        incoming_stage_ids = []
+        for s in stages_data:
+            sid = s.get('id')
+            if sid and not str(sid).startswith('wf-') and not str(sid).startswith('st-'):
+                try:
+                    uuid.UUID(str(sid))
+                    incoming_stage_ids.append(str(sid))
+                except ValueError:
+                    pass
         
         from django.db.models import ProtectedError
         try:
@@ -383,6 +392,96 @@ class WorkflowViewSet(viewsets.ModelViewSet):
         version = get_object_or_404(WorkflowVersion, workflow=workflow, id=version_id)
         serializer = WorkflowVersionSerializer(version)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def versions_restore(self, request, pk=None, version_id=None):
+        from django.db import transaction
+        workflow = self.get_object()
+        version = get_object_or_404(WorkflowVersion, workflow=workflow, id=version_id)
+        snapshot = version.snapshot
+
+        with transaction.atomic():
+            # 1. Wipe current draft stages & rules
+            workflow.stages.all().delete()
+            workflow.rules.all().delete()
+
+            # 2. Recreate Stages
+            stage_mapping = {} # old_id -> new_id
+            for stage_data in snapshot.get('stages', []):
+                old_id = stage_data.get('id')
+                specific_approver_id = None
+                if stage_data.get('specific_approver'):
+                    specific_approver_id = stage_data['specific_approver'].get('id')
+
+                new_stage = WorkflowStage.objects.create(
+                    workflow=workflow,
+                    name=stage_data.get('name'),
+                    order=stage_data.get('order'),
+                    approver_role=stage_data.get('approver_role'),
+                    specific_approver_id=specific_approver_id
+                )
+                if old_id:
+                    stage_mapping[str(old_id)] = str(new_stage.id)
+
+            # 3. Recreate Rules (Recursive Helper)
+            def create_rule(rule_data, parent=None, stage_id=None):
+                action_target = rule_data.get('action_target')
+                if action_target and isinstance(action_target, dict):
+                    old_target_stage = action_target.get('stage_id')
+                    if old_target_stage and str(old_target_stage) in stage_mapping:
+                        action_target['stage_id'] = stage_mapping[str(old_target_stage)]
+
+                new_rule = Rule.objects.create(
+                    workflow=workflow,
+                    stage_id=stage_id,
+                    parent_rule=parent,
+                    logical_operator=rule_data.get('logical_operator', ''),
+                    field_name=rule_data.get('field_id', '') or rule_data.get('field_name', ''),
+                    operator=rule_data.get('operator', ''),
+                    value=rule_data.get('value', ''),
+                    action=rule_data.get('action', ''),
+                    action_target=action_target,
+                    order=rule_data.get('order', 0)
+                )
+                for child_data in rule_data.get('children', []):
+                    create_rule(child_data, parent=new_rule, stage_id=stage_id)
+
+            for rule_data in snapshot.get('rules', []):
+                old_stage_id = rule_data.get('target_stage_id')
+                new_stage_id = stage_mapping.get(str(old_stage_id)) if old_stage_id else None
+                create_rule(rule_data, parent=None, stage_id=new_stage_id)
+
+            # 4. Publish as a new version
+            workflow.refresh_from_db()
+            import json
+            from django.core.serializers.json import DjangoJSONEncoder
+            from workflows.serializers import WorkflowDetailSerializer
+            raw_snapshot = WorkflowDetailSerializer(workflow).data
+            new_snapshot = json.loads(json.dumps(raw_snapshot, cls=DjangoJSONEncoder))
+            
+            next_version = (workflow.current_version or 0) + 1
+            WorkflowVersion.objects.create(
+                workflow=workflow,
+                version_number=next_version,
+                snapshot=new_snapshot,
+                changelog=f'Restored from v{version.version_number}',
+                published_by=request.user,
+                is_active=True
+            )
+            workflow.current_version = next_version
+            workflow.is_published = True
+            workflow.save()
+
+            create_audit_log(
+                request.user,
+                'workflow_restored',
+                'workflow',
+                workflow.id,
+                new_value={"restored_from_version": version.version_number},
+                request=request
+            )
+
+        return Response(WorkflowDetailSerializer(workflow).data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['get'])
     def versions_diff(self, request, pk=None, v1_id=None, v2_id=None):

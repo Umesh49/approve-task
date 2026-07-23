@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { Navbar } from './Navbar'
+import { CopilotWidget } from '../copilot/CopilotWidget'
 
 export function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
@@ -27,6 +28,7 @@ export function AppLayout() {
           <Outlet />
         </main>
       </div>
+      <CopilotWidget />
     </div>
   )
 }

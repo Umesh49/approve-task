@@ -49,19 +49,21 @@ class RuleSerializer(serializers.ModelSerializer):
         field_name = attrs.get('field_name')
         operator = attrs.get('operator')
         value = attrs.get('value')
+        action = attrs.get('action')
 
         if self.instance:
             logical_operator = attrs.get('logical_operator', self.instance.logical_operator)
             field_name = attrs.get('field_name', self.instance.field_name)
             operator = attrs.get('operator', self.instance.operator)
             value = attrs.get('value', self.instance.value)
+            action = attrs.get('action', self.instance.action)
 
         if logical_operator:
             if field_name or operator or value is not None:
                 raise serializers.ValidationError("Group node cannot define field_name, operator, or value.")
         else:
-            if not field_name or not operator or value is None:
-                raise serializers.ValidationError("Leaf node must specify field_name, operator, and value.")
+            if not action and (not field_name or not operator or value is None):
+                raise serializers.ValidationError("Leaf node must specify either an action (for unconditional routing) or field_name, operator, and value (for conditional routing).")
         return attrs
 
 class RuleTreeSerializer(serializers.ModelSerializer):

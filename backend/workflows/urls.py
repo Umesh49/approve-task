@@ -42,6 +42,10 @@ urlpatterns = [
         'get': 'versions_diff'
     }), name='workflow-versions-diff'),
 
+    path('<uuid:pk>/versions/<uuid:version_id>/restore/', WorkflowViewSet.as_view({
+        'post': 'versions_restore'
+    }), name='workflow-versions-restore'),
+
     path('<uuid:wf_id>/stages/', WorkflowStageViewSet.as_view({
         'get': 'list',
         'post': 'create'
